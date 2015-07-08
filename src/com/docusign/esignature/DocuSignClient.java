@@ -442,7 +442,7 @@ public class DocuSignClient {
 			DataOutputStream dos = new DataOutputStream( conn.getOutputStream() );
 			dos.writeBytes(lastRequest); dos.flush(); dos.close();
 			int status = conn.getResponseCode(); // triggers the request
-			if( status != 201 || status != 200)	// 201 = Created
+			if( status != 201)	// 201 = Created
 			{
 				String errorMessage = String.format("Connection: %s ; Status Response Code: %s ; last request: %s", connectionString, status, lastRequest);
 				if(conn.getErrorStream() != null) {
