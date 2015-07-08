@@ -430,22 +430,25 @@ public class DocuSignClient {
 			+ "\",\"userName\": \"" + userName 
 			+ "\",\"clientUserId\": \"" + clientUserId + "\"}";
 
+			String connectionString = getBaseUrl() + "/envelopes/" + envelopeId + "/views/recipient";
 
-			conn = getRestConnection(getBaseUrl() + "/envelopes/" + envelopeId + "/views/recipient");
+			conn = getRestConnection(connectionString);
 			conn.setRequestMethod("POST");
-			conn.setRequestProperty("Content-Length", Integer.toString(lastRequest.length()));
-			conn.setRequestProperty("Accept", "application/xml"); 
+			String contentLength = Integer.toString(lastRequest.length());
+			conn.setRequestProperty("Content-Length", contentLength);
+			conn.setRequestProperty("Accept", "application/xml");
 
 			// write the body of the request...
 			DataOutputStream dos = new DataOutputStream( conn.getOutputStream() );
 			dos.writeBytes(lastRequest); dos.flush(); dos.close();
 			int status = conn.getResponseCode(); // triggers the request
-			if( status != 201 )	// 201 = Created
+			if( status != 201 || status != 200)	// 201 = Created
 			{
-				String errorText = getErrorDetails(conn);
-				System.err.print("Error calling webservice, status is: " + status);
-				System.err.print("Error calling webservice, error message is: " + errorText );
-				return "";
+				String errorMessage = String.format("Connection: %s ; Status Response Code: %s ; last request: %s", connectionString, status, lastRequest);
+				if(conn.getErrorStream() != null) {
+					errorMessage += " ; " + getErrorDetails(conn);
+				}
+				throw new IOException(errorMessage);
 			}
 
 			// Read the response
