@@ -111,23 +111,14 @@ public class DocuSignClient {
 	 * @throws IOException
 	 * @throws MalformedURLException
 	 */
-	public boolean login() throws MalformedURLException, IOException, LoginException {
+	public boolean login() throws MalformedURLException, IOException {
 		String loginUrl = serverUrl + "/restapi/v2/login_information";
 		HttpURLConnection conn = null;
 
 		try {
 
 			conn = getRestConnection(loginUrl);
-			int status = conn.getResponseCode(); // triggers the request
-			if( status != 200 )	// 200 = OK
-			{
-				InputStream errorStream = conn.getErrorStream();
-				String errorMessage = "";
-				if(errorStream != null){
-					errorMessage = getErrorDetails(conn);
-				}
-				throw new LoginException(String.format("Error calling webservice. {status:" + status + ", message:" + errorMessage + "}"));
-			}
+			checkResponseCode(conn, 200);
 
 			BufferedInputStream bufferStream = extractAndSaveOutput(conn);
 
