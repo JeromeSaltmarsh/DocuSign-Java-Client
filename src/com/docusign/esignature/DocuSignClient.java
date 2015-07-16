@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import javax.security.auth.login.LoginException;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
@@ -110,7 +111,7 @@ public class DocuSignClient {
 	 * @throws IOException
 	 * @throws MalformedURLException
 	 */
-	public boolean login() throws MalformedURLException, IOException {
+	public boolean login() throws MalformedURLException, IOException, LoginException {
 		String loginUrl = serverUrl + "/restapi/v2/login_information";
 		HttpURLConnection conn = null;
 
@@ -120,10 +121,12 @@ public class DocuSignClient {
 			int status = conn.getResponseCode(); // triggers the request
 			if( status != 200 )	// 200 = OK
 			{
-				String errorText = getErrorDetails(conn);
-				System.err.print("Error calling webservice, status is: " + status);
-				System.err.print("Error calling webservice, error message is: " + errorText );
-				return false;
+				InputStream errorStream = conn.getErrorStream();
+				String errorMessage = "";
+				if(errorStream != null){
+					errorMessage = getErrorDetails(conn);
+				}
+				throw new LoginException(String.format("Error calling webservice. {status:" + status + ", message:" + errorMessage + "}"));
 			}
 
 			BufferedInputStream bufferStream = extractAndSaveOutput(conn);
@@ -254,14 +257,7 @@ public class DocuSignClient {
 			dos.flush();
 			dos.close();
 
-			int status = conn.getResponseCode(); // triggers the request
-			if( status != 201 )	// 201 = Created
-			{
-				String errorText = getErrorDetails(conn);
-				System.err.print("Error calling webservice, status is: " + status);
-				System.err.print("Error calling webservice, error message is: " + errorText );
-				return "";
-			}
+			checkResponseCode(conn, 201);
 			// Read the response
 			RequestSignatureResponse response = mapper.readValue(conn.getInputStream(), RequestSignatureResponse.class);
 			return response.getEnvelopeId();
@@ -270,6 +266,19 @@ public class DocuSignClient {
 		{
 			if( conn != null )
 				conn.disconnect();
+		}
+	}
+
+	private void checkResponseCode(HttpURLConnection conn, int expectedStatus) throws IOException {
+		int status = conn.getResponseCode(); // triggers the request
+		if( status != expectedStatus )	// 201 = Created
+		{
+			InputStream errorStream = conn.getErrorStream();
+			String errorMessage = "";
+			if(errorStream != null){
+				errorMessage = getErrorDetails(conn);
+			}
+			throw new RuntimeException(String.format("Error calling webservice. {status:" + status + ", message:" + errorMessage + "}"));
 		}
 	}
 
