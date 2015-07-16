@@ -3,7 +3,7 @@
  *
  * This source code is intended only as a supplement to DocuSign SDK
  * and/or on-line documentation.
- * 
+ *
  * This sample is designed to demonstrate DocuSign features and is not intended
  * for production use. Code and policy for a production application must be
  * developed to meet the specific data and security requirements of the
@@ -55,8 +55,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * This is a client library to help you get started with DocuSign eSignature API
- * 
- * 
+ *
+ *
  * NOTE: it does not and will not have the full functionality of the DocuSign service.
  * Feel free to update the proxy classes yourself and contribute functions.
  * Alternatively you can get the raw HTTP connection and send over your own JSON.
@@ -71,14 +71,14 @@ public class DocuSignClient {
 	private String integratorKey;
 	// this defaults to demo, 
 	// for production you will need to update the default or set it to www.docusign.net
-	private String serverUrl = "https://demo.docusign.net";  
+	private String serverUrl = "https://demo.docusign.net";
 	private String baseUrl = "";
 	private String lastResponse;
 	private String lastRequest;
 	private String lastError;
 	private String accessToken;
-	
-	
+
+
 	//
 	// constructors
 	//
@@ -87,33 +87,33 @@ public class DocuSignClient {
 		this.password = password;
 		this.integratorKey = integratorKey;
 	}
-	
+
 	public DocuSignClient(String email, String password, String accountId, String integratorKey) {
 		this.email = email;
 		this.password = password;
 		this.accountId = accountId;
 		this.integratorKey = integratorKey;
 	}
-	
+
 	public DocuSignClient(String integratorKey) {
 		this(integratorKey, null);
 	}
-	
+
 	public DocuSignClient(String integratorKey, String accessToken) {
 		this.integratorKey = integratorKey;
 		this.accessToken = accessToken;
 	}
-	
+
 	/**
 	 * login will set the baseUrl and accountId to the default account.  
 	 * you can retrieve logged in accounts and use other accounts if you wish.
-	 * @throws IOException 
-	 * @throws MalformedURLException 
+	 * @throws IOException
+	 * @throws MalformedURLException
 	 */
 	public boolean login() throws MalformedURLException, IOException {
 		String loginUrl = serverUrl + "/restapi/v2/login_information";
 		HttpURLConnection conn = null;
-		
+
 		try {
 
 			conn = getRestConnection(loginUrl);
@@ -127,11 +127,11 @@ public class DocuSignClient {
 			}
 
 			BufferedInputStream bufferStream = extractAndSaveOutput(conn);
-			
+
 			ObjectMapper mapper = new ObjectMapper();
 			LoginResult loginResult = mapper.readValue( bufferStream, LoginResult.class );
 			loginAccounts = loginResult.getLoginAccounts();
-			
+
 			// NOTE: there should never be a time when we get a positive result and less than one account.
 			accountId = loginAccounts.get(0).getAccountId();
 			baseUrl = loginAccounts.get(0).getBaseUrl();
@@ -159,7 +159,7 @@ public class DocuSignClient {
 	public String requestSignatureFromTemplate( RequestSignatureFromTemplate request ) throws MalformedURLException, IOException {
 		HttpURLConnection conn = null;
 
-		try 
+		try
 		{
 			// append "/envelopes" to the baseUrl and use in the request
 			conn = getRestConnection(baseUrl + "/envelopes");
@@ -192,15 +192,15 @@ public class DocuSignClient {
 				conn.disconnect();
 		}
 	}
-	
+
 	public String reqeustSignatureFromDocuments(RequestSignatureFromDocuments request, InputStream[] stream)
 			throws MalformedURLException, IOException {
-		
+
 		// TODO: lastRequest is not properly logged here
-		
+
 		if( stream == null || stream.length == 0 )
 			throw new IllegalArgumentException("You need to pass in at least one file");
-		
+
 		if( stream.length != request.getDocuments().size() )
 			throw new IllegalArgumentException("The number of file bytes should be equal to the number of documents in the request. Got " + stream.length + " byte arrays, and " + request.getDocuments().size() + " file definitions.");
 
@@ -212,10 +212,10 @@ public class DocuSignClient {
 			ObjectMapper mapper = new ObjectMapper();
 			String jsonBody = mapper.writeValueAsString(request);
 
-			String startRequest = "\r\n\r\n--BOUNDARY\r\n" + 
-			"Content-Type: application/json\r\n" + 
-			"Content-Disposition: form-data\r\n" + 
-			"\r\n" + jsonBody;
+			String startRequest = "\r\n\r\n--BOUNDARY\r\n" +
+					"Content-Type: application/json\r\n" +
+					"Content-Disposition: form-data\r\n" +
+					"\r\n" + jsonBody;
 
 			// we break this up into two string since the PDF doc bytes go here and are not in string format.
 			// see further below where we write to the outputstream...
@@ -226,34 +226,34 @@ public class DocuSignClient {
 
 			// write the body of the request...
 			DataOutputStream dos = new DataOutputStream( conn.getOutputStream() );
-			dos.writeBytes(startRequest.toString()); 
-			
+			dos.writeBytes(startRequest.toString());
+
 			for( int i = 0; i < stream.length; ++i) {
 				Document next = request.getDocuments().get(i);
-				
+
 				String contentType = next.getContentType();
 				if(contentType == null){
 					contentType = "application/pdf";
 				}
-				
+
 				String boundary = "\r\n--BOUNDARY\r\n" + 	// opening boundary for next document
-				"Content-Type: " + contentType + "\r\n" + 
-				"Content-Disposition: file; filename=\"" + next.getName() + "\"; documentId=" + next.getDocumentId() + "\r\n" + 
-				"\r\n";
-				
+						"Content-Type: " + contentType + "\r\n" +
+						"Content-Disposition: file; filename=\"" + next.getName() + "\"; documentId=" + next.getDocumentId() + "\r\n" +
+						"\r\n";
+
 				dos.writeBytes(boundary);
-				
+
 				byte[] buffer = new byte[1024];
 				int len;
 				while ((len = stream[i].read(buffer)) != -1) {
 					dos.write(buffer, 0, len);
 				}
 			}
-			
-			dos.writeBytes(endBoundary); 
-			dos.flush(); 
+
+			dos.writeBytes(endBoundary);
+			dos.flush();
 			dos.close();
-			
+
 			int status = conn.getResponseCode(); // triggers the request
 			if( status != 201 )	// 201 = Created
 			{
@@ -272,19 +272,19 @@ public class DocuSignClient {
 				conn.disconnect();
 		}
 	}
-	
-	public String reqeustSignatureFromDocuments(RequestSignatureFromDocuments request, File[] files) throws MalformedURLException, IOException 
+
+	public String reqeustSignatureFromDocuments(RequestSignatureFromDocuments request, File[] files) throws MalformedURLException, IOException
 	{
 		// Convert the files to input streams
 		List<InputStream> streams = new ArrayList<InputStream>();
 		for (int i=0; i<files.length; i++){
 			streams.add(new FileInputStream(files[i]));
 		}
-		
+
 		return reqeustSignatureFromDocuments(request, streams.toArray(new InputStream[streams.size()]));
 	}
 
-	
+
 	/**
 	 * You can use this function after login() to get a URL with an authenticated view
 	 * into DocuSign.  It is useful for SSO-like functionality where your app
@@ -295,12 +295,12 @@ public class DocuSignClient {
 	 */
 	public String requestConsoleView() throws IOException {
 		HttpURLConnection conn = null;
-		
+
 		// construct an outgoing xml request body
-		lastRequest = "<consoleViewRequest xmlns=\"http://www.docusign.com/restapi\">" + 
-				"<accountId>" + getAccountId() + "</accountId>" + 
+		lastRequest = "<consoleViewRequest xmlns=\"http://www.docusign.com/restapi\">" +
+				"<accountId>" + getAccountId() + "</accountId>" +
 				"</consoleViewRequest>";
-		
+
 		// append "/views/console" to the baseUrl and use in the request
 		try {
 			conn = getRestConnection(getBaseUrl() + "/views/console");
@@ -345,7 +345,7 @@ public class DocuSignClient {
 				conn.disconnect();
 		}
 	}
-	
+
 	/**
 	 * Use this function to get an authenticated sending view.  This is useful
 	 * if you have document or recipient information in your application but
@@ -359,14 +359,14 @@ public class DocuSignClient {
 	 */
 	public String requestSendingView(String envelopeId,  String returnUrl) throws MalformedURLException, IOException {
 		HttpURLConnection conn = null;
-		try 
+		try
 		{
 			lastRequest = "{\"returnUrl\": \"" + returnUrl + "\"}";
 
 			conn = getRestConnection(getBaseUrl() + "/envelopes/" + envelopeId + "/views/sender");
 			conn.setRequestMethod("POST");
 			conn.setRequestProperty("Content-Length", Integer.toString(lastRequest.length()));
-			conn.setRequestProperty("Accept", "application/xml"); 
+			conn.setRequestProperty("Accept", "application/xml");
 
 			// write the body of the request...
 			DataOutputStream dos = new DataOutputStream( conn.getOutputStream() );
@@ -404,7 +404,7 @@ public class DocuSignClient {
 				conn.disconnect();
 		}
 	}
-	
+
 	/**
 	 * If you sent documents and defined one of the recipients as "embedded", meaning
 	 * you will be in charge of presenting the signing to that person you can use this function
@@ -421,14 +421,13 @@ public class DocuSignClient {
 	 */
 	public String requestRecipientView(String envelopeId, String userName, String email, String clientUserId, String returnUrl, String authenticationMethod) throws MalformedURLException, IOException {
 		HttpURLConnection conn = null;
-		try 
+		try
 		{
-
-			lastRequest = "{\"authenticationMethod\": \"" + authenticationMethod 
-			+ "\",\"email\": \"" + email 
-			+ "\",\"returnUrl\": \"" + returnUrl 
-			+ "\",\"userName\": \"" + userName 
-			+ "\",\"clientUserId\": \"" + clientUserId + "\"}";
+			lastRequest = "{\"authenticationMethod\": \"" + authenticationMethod
+					+ "\",\"email\": \"" + email
+					+ "\",\"returnUrl\": \"" + returnUrl
+					+ "\",\"userName\": \"" + userName
+					+ "\",\"clientUserId\": \"" + clientUserId + "\"}";
 
 			String connectionString = getBaseUrl() + "/envelopes/" + envelopeId + "/views/recipient";
 
@@ -444,9 +443,14 @@ public class DocuSignClient {
 			int status = conn.getResponseCode(); // triggers the request
 			if( status != 201)	// 201 = Created
 			{
-				String errorMessage = String.format("Connection: %s ; Status Response Code: %s ; last request: %s", connectionString, status, lastRequest);
-				if(conn.getErrorStream() != null) {
-					errorMessage += " ; " + getErrorDetails(conn);
+				String errorMessage = String.format("Connection: %s ; Status Response Code: %s ; last request: %s; lastError: %s", connectionString, status, lastRequest, lastError);
+				InputStream errorStream = conn.getErrorStream();
+				if(errorStream != null) {
+					try {
+						errorMessage += " ; " + getErrorDetails(errorStream);
+					}catch(Exception e){
+
+					}
 				}
 				throw new IOException(errorMessage);
 			}
@@ -475,8 +479,8 @@ public class DocuSignClient {
 				conn.disconnect();
 		}
 	}
-	
-		/**
+
+	/**
 	 * a way to get status of all envelopes
 	 * @param accountId
 	 * @param fromDate
@@ -489,7 +493,7 @@ public class DocuSignClient {
 		String fromDateStr = new SimpleDateFormat("MM/dd/yyyy").format(fromDate);
 		String envelopeUrl = baseUrl + "/envelopes?from_date=" + URLEncoder.encode(fromDateStr, "UTF-8") + "&from_to_status=" + fromToStatus;
 		HttpURLConnection conn = null;
-		
+
 		try {
 
 			conn = getRestConnection(envelopeUrl);
@@ -503,10 +507,10 @@ public class DocuSignClient {
 			}
 
 			BufferedInputStream bufferStream = extractAndSaveOutput(conn);
-			
+
 			ObjectMapper mapper = new ObjectMapper();
 			StatusInformation statusInformation = mapper.readValue( bufferStream, StatusInformation.class );
-			
+
 			return statusInformation;
 		}
 		finally
@@ -515,8 +519,8 @@ public class DocuSignClient {
 				conn.disconnect();
 		}
 	}
-	
-	
+
+
 	/**
 	 * a way to get envelope properties such as status, date signed and many more
 	 * @param envelopeId is the identifier of the envelope you are interested in
@@ -527,7 +531,7 @@ public class DocuSignClient {
 	public EnvelopeInformation requestEnvelopeInformation(String envelopeId) throws MalformedURLException, IOException {
 		String envelopeUrl = baseUrl + "/envelopes/" + envelopeId;
 		HttpURLConnection conn = null;
-		
+
 		try {
 
 			conn = getRestConnection(envelopeUrl);
@@ -541,10 +545,10 @@ public class DocuSignClient {
 			}
 
 			BufferedInputStream bufferStream = extractAndSaveOutput(conn);
-			
+
 			ObjectMapper mapper = new ObjectMapper();
 			EnvelopeInformation envelopeInformation = mapper.readValue( bufferStream, EnvelopeInformation.class );
-			
+
 			return envelopeInformation;
 		}
 		finally
@@ -553,7 +557,7 @@ public class DocuSignClient {
 				conn.disconnect();
 		}
 	}
-	
+
 	/**
 	 * this function will get you a combined document of all the the files in an envelope that were sent out together
 	 * @param envelopeId is the identifier of the envelope you'd like to get a copy of
@@ -564,8 +568,8 @@ public class DocuSignClient {
 	public InputStream requestCombinedDocument(String envelopeId) throws MalformedURLException, IOException {
 		String envelopeUrl = baseUrl + "/envelopes/" + envelopeId + "/documents/combined";
 		HttpURLConnection conn = null;
-		
-		try 
+
+		try
 		{
 			conn = getRestConnection(envelopeUrl);
 			conn.setRequestProperty("Accept", "application/pdf");
@@ -595,12 +599,12 @@ public class DocuSignClient {
 	 * @throws MalformedURLException
 	 * @throws IOException
 	 */
-	public RecipientInformation requestRecipientInformation(String envelopeId) throws MalformedURLException, IOException 
+	public RecipientInformation requestRecipientInformation(String envelopeId) throws MalformedURLException, IOException
 	{
 		String envelopeUrl = baseUrl + "/envelopes/" + envelopeId + "/recipients";
 		HttpURLConnection conn = null;
-		
-		try 
+
+		try
 		{
 			conn = getRestConnection(envelopeUrl);
 			int status = conn.getResponseCode(); // triggers the request
@@ -643,28 +647,36 @@ public class DocuSignClient {
 		conn.setRequestProperty("Content-Type", "application/json");
 		conn.setRequestProperty("Accept", "application/json");
 		conn.setDoOutput(true);
-		
+
 		return conn;
 	}
-	
+
 	public String getLastError(){
 		return lastError;
 	}
-	
+
 	public void setLastError(String str){
 		String lastError = str;
 	}
 
-	private String getErrorDetails(HttpURLConnection conn) throws IOException {
-		BufferedReader br = new BufferedReader(new InputStreamReader( conn.getErrorStream()));
-		StringBuilder responseText = new StringBuilder();
-		String line = null;
-		while ( (line = br.readLine()) != null)
-			responseText.append(line);
-		lastError = responseText.toString();
-		return lastError;
+	private String getErrorDetails(InputStream errorStream) throws IOException {
+		if(errorStream != null) {
+			BufferedReader br = new BufferedReader(new InputStreamReader(errorStream));
+			StringBuilder responseText = new StringBuilder();
+			String line = null;
+			while ((line = br.readLine()) != null)
+				responseText.append(line);
+			lastError = responseText.toString();
+			return lastError;
+		}else{
+			return "no error stream available";
+		}
 	}
-	
+
+	private String getErrorDetails(HttpURLConnection conn) throws IOException {
+		return getErrorDetails(conn.getErrorStream());
+	}
+
 	private BufferedInputStream extractAndSaveOutput(HttpURLConnection conn) throws IOException {
 		BufferedInputStream bufferStream = new BufferedInputStream(conn.getInputStream(), 1024*1024);
 		bufferStream.mark(0);
@@ -678,14 +690,14 @@ public class DocuSignClient {
 		bufferStream.reset();
 		return bufferStream;
 	}
-	
+
 	public String getAuthHeader() {
-		String authenticateStr = 
-			"<DocuSignCredentials>" + 
-			"<Username>" + email + "</Username>" +
-			"<Password>" + password + "</Password>" + 
-			"<IntegratorKey>" + integratorKey + "</IntegratorKey>" + 
-			"</DocuSignCredentials>";
+		String authenticateStr =
+				"<DocuSignCredentials>" +
+						"<Username>" + email + "</Username>" +
+						"<Password>" + password + "</Password>" +
+						"<IntegratorKey>" + integratorKey + "</IntegratorKey>" +
+						"</DocuSignCredentials>";
 		return authenticateStr;
 	}
 
@@ -706,11 +718,11 @@ public class DocuSignClient {
 	public String getAccountId() {
 		return accountId;
 	}
-	
+
 	public String getIntegratorKey() {
 		return integratorKey;
 	}
-	
+
 	public void setServerUrl(String serverUrl) {
 		this.serverUrl = serverUrl;
 	}
@@ -725,15 +737,15 @@ public class DocuSignClient {
 	public String getBaseUrl() {
 		return baseUrl;
 	}
-	
+
 	public String getLastResponseText() {
 		return lastResponse;
 	}
-	
+
 	public String getLastRequestText() {
 		return lastRequest;
 	}
-	
+
 	public String getAccessToken() {
 		return accessToken;
 	}
